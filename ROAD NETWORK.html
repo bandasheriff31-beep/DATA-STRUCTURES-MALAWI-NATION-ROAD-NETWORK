@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Malawi District Road Network - Dijkstra and MST</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf7ea;--ink:#1b3a8a;--txt:#1d1d1d;--red:#a8281c;--line:#bcd3e6;--hi:#e08a00;--card:#fffdf5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171a24;--ink:#8fb0ff;--txt:#ececec;--red:#ff8a7a;--line:#2b3347;--hi:#ffc247;--card:#1e2230;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171a24;--ink:#8fb0ff;--txt:#ececec;--red:#ff8a7a;--line:#2b3347;--hi:#ffc247;--card:#1e2230;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:17px/1.4 Caveat,"Comic Sans MS",cursive;padding:12px}
+h1{margin:0 0 4px;color:var(--ink);font-size:30px}
+p.s{margin:0 0 10px;color:var(--red)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+select,button{font:inherit;padding:6px 10px;border:2px solid var(--ink);border-radius:8px;background:var(--card);color:var(--txt)}
+button{cursor:pointer;color:var(--ink);font-weight:700}
+button.on{background:var(--ink);color:var(--bg)}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;max-width:1100px;margin:auto}
+@media(min-width:900px){.wrap{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}}
+svg{width:100%;height:auto;background:var(--bg);border:2px solid var(--ink);border-radius:10px;max-height:88vh}
+.box{background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:10px;margin-bottom:10px}
+.res{font-size:22px;color:var(--hi);font-weight:700}
+.sc{overflow-x:auto;max-height:340px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+td,th{border-bottom:1px dashed var(--line);padding:2px 6px;text-align:left;white-space:nowrap}
+th{color:var(--ink);position:sticky;top:0;background:var(--card)}
+.sk{color:var(--muted,#888)}
+</style></head><body>
+<div class="wrap"><div>
+<h1>Malawi District Road Network</h1>
+<p class="s">20 districts, 30 roads, weights are approximate road km (undirected)</p>
+<svg id="m" viewBox="0 0 620 980" role="img" aria-label="Graph of Malawi districts"></svg>
+</div><div>
+<div class="box"><div class="row">
+<label>From <select id="a"></select></label>
+<label>To <select id="b"></select></label></div>
+<div class="row"><button id="go" class="on">Dijkstra shortest path</button><button id="mst">Minimum spanning tree</button></div>
+<div id="out" class="res">Pick two districts</div><div id="route"></div></div>
+<div class="box"><b id="tt">Step-by-step trace</b><div class="sc"><table id="tb"></table></div></div>
+</div></div>
+<script>
+const D={"n":["Karonga","Rumphi","Mzimba","Nkhata Bay","Kasungu","Nkhotakota","Salima","Lilongwe","Dedza","Ntcheu","Balaka","Mangochi","Machinga","Zomba","Blantyre","Mwanza","Thyolo","Mulanje","Chikwawa","Nsanje"],"p":[[137,40],[120,86],[58,123],[222,110],[30,181],[224,169],[255,276],[101,301],[231,352],[323,410],[422,450],[451,364],[590,498],[533,551],[434,655],[290,609],[476,725],[584,715],[374,715],[512,940]],"e":[[0,1,150],[1,2,70],[2,3,50],[2,4,230],[3,5,250],[4,5,135],[4,7,130],[5,6,120],[6,7,100],[6,11,160],[6,8,120],[7,8,85],[8,9,60],[9,10,80],[9,15,115],[10,11,90],[10,12,50],[10,14,140],[11,12,70],[12,13,50],[13,14,65],[13,17,105],[14,16,40],[14,15,65],[14,17,80],[14,18,105],[15,18,80],[16,17,70],[16,18,95],[18,19,90]]},N=D.n.length,adj=Array.from({length:N},()=>[]);
+D.e.forEach(([u,v,w])=>{adj[u].push([v,w]);adj[v].push([u,w])});
+const svg=document.getElementById("m"),NS="http://www.w3.org/2000/svg";
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
+const ek={};let nodes=[];
+D.e.forEach(([u,v,w],i)=>{const[x1,y1]=D.p[u],[x2,y2]=D.p[v],mx=(x1+x2)/2+((i*7)%9-4),my=(y1+y2)/2+((i*5)%9-4);
+ ek[u+"-"+v]=ek[v+"-"+u]=el("path",{d:`M${x1} ${y1}Q${mx} ${my} ${x2} ${y2}`,fill:"none",stroke:"var(--ink)","stroke-width":2,"stroke-linecap":"round"});
+ const t=el("text",{x:mx,y:my+4,"text-anchor":"middle","font-size":13,fill:"var(--red)","font-family":"Caveat,cursive","font-weight":700,stroke:"var(--bg)","stroke-width":4,"paint-order":"stroke"});t.textContent=w});
+D.n.forEach((n,i)=>{const[x,y]=D.p[i],g=el("g",{style:"cursor:pointer"});
+ const c=el("ellipse",{cx:x,cy:y,rx:7,ry:6,fill:"var(--bg)",stroke:"var(--ink)","stroke-width":2.2},g);nodes.push(c);
+ const right=x<420,t=el("text",{x:x+(right?11:-11),y:y+4,"text-anchor":right?"start":"end","font-size":16,fill:"var(--txt)","font-family":"Caveat,cursive","font-weight":700,stroke:"var(--bg)","stroke-width":4,"paint-order":"stroke"},g);t.textContent=n;
+ g.onclick=()=>{if(!pick){A.value=i;pick=1}else{B.value=i;pick=0;run()}}});
+let pick=0;const A=document.getElementById("a"),B=document.getElementById("b"),out=document.getElementById("out"),rt=document.getElementById("route"),tb=document.getElementById("tb"),tt=document.getElementById("tt");
+D.n.forEach((n,i)=>{A.add(new Option(n,i));B.add(new Option(n,i))});A.value=D.n.indexOf("Lilongwe");B.value=D.n.indexOf("Blantyre");
+function reset(){Object.values(ek).forEach(e=>{e.setAttribute("stroke","var(--ink)");e.setAttribute("stroke-width",2)});nodes.forEach(n=>n.setAttribute("fill","var(--bg)"))}
+function hi(u,v){const e=ek[u+"-"+v];e.setAttribute("stroke","var(--hi)");e.setAttribute("stroke-width",5)}
+function dijkstra(s,t){const dist=Array(N).fill(Infinity),par=Array(N).fill(-1),done=Array(N).fill(false),log=[];dist[s]=0;
+ for(let k=0;k<N;k++){let u=-1;for(let i=0;i<N;i++)if(!done[i]&&(u<0||dist[i]<dist[u]))u=i;if(u<0||dist[u]===Infinity)break;done[u]=true;const up=[];
+  for(const[v,w]of adj[u])if(!done[v]&&dist[u]+w<dist[v]){up.push(D.n[v]+" "+(dist[v]===Infinity?"inf":dist[v])+"→"+(dist[u]+w));dist[v]=dist[u]+w;par[v]=u}
+  log.push([k+1,D.n[u],dist[u],up.join(", ")]);if(u===t)break}
+ return{dist,par,log}}
+function run(){reset();const s=+A.value,t=+B.value,r=dijkstra(s,t);
+ const path=[];for(let v=t;v!==-1;v=r.par[v])path.unshift(v);
+ for(let i=0;i<path.length-1;i++)hi(path[i],path[i+1]);path.forEach(v=>nodes[v].setAttribute("fill","var(--hi)"));
+ out.textContent=D.n[s]+" to "+D.n[t]+": "+r.dist[t]+" km";rt.textContent="Route: "+path.map(v=>D.n[v]).join(" → ");
+ tt.textContent="Dijkstra trace (stops when destination is settled)";
+ tb.innerHTML="<tr><th>Step</th><th>Settled</th><th>Dist</th><th>Relaxed (old→new)</th></tr>"+r.log.map(l=>`<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td>${l[3]}</td></tr>`).join("");
+ go.className="on";ms.className=""}
+function kruskal(){reset();const es=[...D.e].sort((a,b)=>a[2]-b[2]),p=[...Array(N).keys()],f=x=>p[x]===x?x:p[x]=f(p[x]);let tot=0,c=0,rows="";
+ for(const[u,v,w]of es){const a=f(u),b=f(v);if(a!==b){p[a]=b;tot+=w;c++;hi(u,v);rows+=`<tr><td>take</td><td>${D.n[u]} - ${D.n[v]}</td><td>${w}</td></tr>`}else rows+=`<tr class="sk"><td>skip</td><td>${D.n[u]} - ${D.n[v]}</td><td>${w}</td></tr>`}
+ out.textContent="MST total: "+tot+" km ("+c+" edges)";rt.textContent="Kruskal: sort edges, add cheapest that does not form a cycle.";
+ tt.textContent="Kruskal trace";tb.innerHTML="<tr><th>Action</th><th>Edge</th><th>km</th></tr>"+rows;go.className="";ms.className="on"}
+const go=document.getElementById("go"),ms=document.getElementById("mst");go.onclick=run;ms.onclick=kruskal;A.onchange=B.onchange=run;run();
+</script></body></html>
